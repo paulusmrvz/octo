@@ -38,6 +38,9 @@ namespace Octo {
         void PickPhysicalDevie();
         bool IsDeviceSuitable(VkPhysicalDevice device);
         QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
+    private: // Logical Device
+        void CreateDevice();
+        void DestroyDevice();
     private: // Fields
         std::shared_ptr<Window> m_pWin;
     private: // Instance
@@ -49,5 +52,8 @@ namespace Octo {
         VkDebugUtilsMessengerEXT m_DebugMessenger;
     private: // Physical Device
         VkPhysicalDevice m_PhDevice;
+    private: // Logical Device
+        VkDevice m_Device;
+        VkQueue m_GraphicsQueue;
     };
 }

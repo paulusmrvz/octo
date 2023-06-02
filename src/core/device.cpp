@@ -30,12 +30,16 @@ namespace Octo {
     Device::Device(std::shared_ptr<Window> pWin)
         : m_pWin{ pWin }, 
         m_Instance{ VK_NULL_HANDLE },
-        m_PhDevice{ VK_NULL_HANDLE } {
+        m_PhDevice{ VK_NULL_HANDLE },
+        m_Device{ VK_NULL_HANDLE } {
         CreateInstance();
         SetupDebugMessenger();
+        PickPhysicalDevie();
+        CreateDevice();
     }
 
     Device::~Device() {
+        DestroyDevice();
         DestroyMessenger();
         DestroyInstance();
     }
@@ -191,5 +195,46 @@ namespace Octo {
         }
 
         return indices;
+    }
+
+    void Device::CreateDevice() {
+        QueueFamilyIndices indices = FindQueueFamilies(m_PhDevice);
+
+        VkDeviceQueueCreateInfo queueCreateInfo{};
+        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueCreateInfo.queueFamilyIndex = indices.GraphicsFamily.value();
+        queueCreateInfo.queueCount = 1;
+
+        float queuePriority = 1.0f;
+        queueCreateInfo.pQueuePriorities = &queuePriority;
+
+        VkPhysicalDeviceFeatures deviceFeatures{};
+
+        VkDeviceCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+
+        createInfo.pQueueCreateInfos = &queueCreateInfo;
+        createInfo.queueCreateInfoCount = 1;
+
+        createInfo.pEnabledFeatures = &deviceFeatures;
+
+        createInfo.enabledExtensionCount = 0;
+
+        if (enableValidationLayers) {
+            createInfo.enabledLayerCount = static_cast<uint32_t>(m_ValidationLayers.size());
+            createInfo.ppEnabledLayerNames = m_ValidationLayers.data();
+        } else {
+            createInfo.enabledLayerCount = 0;
+        }
+
+        if (vkCreateDevice(m_PhDevice, &createInfo, nullptr, &m_Device) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create logical device!");
+        }
+
+        vkGetDeviceQueue(m_Device, indices.GraphicsFamily.value(), 0, &m_GraphicsQueue);
+    }
+
+    void Device::DestroyDevice() {
+        vkDestroyDevice(m_Device, nullptr);
     }
 }
