@@ -28,6 +28,7 @@ namespace Octo {
         void PollEvents();
         bool IsShouldClose() const;
         void GetInput();
+        GLFWwindow* GetNative() const;
         std::vector<const char*> GetSurfaceExtensions() const;
     private:
         void Create();

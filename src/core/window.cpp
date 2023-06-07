@@ -36,6 +36,10 @@ namespace Octo {
         }
     }
 
+    GLFWwindow* Window::GetNative() const {
+        return m_Window;
+    }
+
     std::vector<const char*> Window::GetSurfaceExtensions() const {
         uint32_t glfwExtensionsCount{};
         const char **glfwExtensions{ glfwGetRequiredInstanceExtensions(&glfwExtensionsCount) };

@@ -9,9 +9,10 @@
 
 struct QueueFamilyIndices {
     std::optional<uint32_t> GraphicsFamily;
+    std::optional<uint32_t> PresentFamily;
 
-    bool isComplete() {
-        return GraphicsFamily.has_value();
+    bool IsComplete() {
+        return GraphicsFamily.has_value() && PresentFamily.has_value();
     }
 };
 
@@ -34,6 +35,9 @@ namespace Octo {
         void SetupDebugMessenger();
         void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo);
         void DestroyMessenger();
+    private: // Surface
+        void CreateSurface();
+        void DestroySurface();
     private: // Physical Device
         void PickPhysicalDevie();
         bool IsDeviceSuitable(VkPhysicalDevice device);
@@ -50,10 +54,15 @@ namespace Octo {
             "VK_LAYER_KHRONOS_validation"
         };
         VkDebugUtilsMessengerEXT m_DebugMessenger;
+    private: // Surface
+        VkSurfaceKHR m_Surface;
     private: // Physical Device
         VkPhysicalDevice m_PhDevice;
     private: // Logical Device
         VkDevice m_Device;
         VkQueue m_GraphicsQueue;
+    private: // Queues
+        VkQueue m_GraphicsQueue;
+        VkQueue m_PresentQueue;
     };
 }

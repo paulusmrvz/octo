@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <cstring>
 #include <iostream>
+#include <set>
 
 #ifdef NDEBUG
     const bool enableValidationLayers = false;
@@ -30,16 +31,19 @@ namespace Octo {
     Device::Device(std::shared_ptr<Window> pWin)
         : m_pWin{ pWin }, 
         m_Instance{ VK_NULL_HANDLE },
+        m_Surface{ VK_NULL_HANDLE },
         m_PhDevice{ VK_NULL_HANDLE },
         m_Device{ VK_NULL_HANDLE } {
         CreateInstance();
         SetupDebugMessenger();
+        CreateSurface();
         PickPhysicalDevie();
         CreateDevice();
     }
 
     Device::~Device() {
         DestroyDevice();
+        DestroySurface();
         DestroyMessenger();
         DestroyInstance();
     }
@@ -143,6 +147,12 @@ namespace Octo {
         }
     }
 
+    void Device::CreateSurface() {
+        if (glfwCreateWindowSurface(m_Instance, m_pWin->GetNative(), nullptr, &m_Surface) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create window surface!");
+        }
+    }
+
     void Device::PickPhysicalDevie() {
         uint32_t deviceCount = 0;
         vkEnumeratePhysicalDevices(m_Instance, &deviceCount, nullptr);
@@ -169,7 +179,7 @@ namespace Octo {
     bool Device::IsDeviceSuitable(VkPhysicalDevice device) {
         QueueFamilyIndices indices = FindQueueFamilies(device);
 
-        return indices.isComplete();
+        return indices.IsComplete();
     }
 
     QueueFamilyIndices Device::FindQueueFamilies(VkPhysicalDevice device) {
@@ -187,11 +197,18 @@ namespace Octo {
                 indices.GraphicsFamily = i;
             }
 
-            if (indices.isComplete()) {
+            VkBool32 presentSupport = false;
+            vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_Surface, &presentSupport);
+
+            if (presentSupport) {
+                indices.PresentFamily = i;
+            }
+
+            if (indices.IsComplete()) {
                 break;
             }
 
-            ++i;
+            i++;
         }
 
         return indices;
@@ -200,21 +217,26 @@ namespace Octo {
     void Device::CreateDevice() {
         QueueFamilyIndices indices = FindQueueFamilies(m_PhDevice);
 
-        VkDeviceQueueCreateInfo queueCreateInfo{};
-        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queueCreateInfo.queueFamilyIndex = indices.GraphicsFamily.value();
-        queueCreateInfo.queueCount = 1;
+        std::vector<VkDeviceQueueCreateInfo> queueCreateInfos{};
+        std::set<uint32_t> uniqueQueueFamilies = {indices.GraphicsFamily.value(), indices.PresentFamily.value()};
 
         float queuePriority = 1.0f;
-        queueCreateInfo.pQueuePriorities = &queuePriority;
+        for (uint32_t queueFamily : uniqueQueueFamilies) {
+            VkDeviceQueueCreateInfo queueCreateInfo{};
+            queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            queueCreateInfo.queueFamilyIndex = queueFamily;
+            queueCreateInfo.queueCount = 1;
+            queueCreateInfo.pQueuePriorities = &queuePriority;
+            queueCreateInfos.push_back(queueCreateInfo);
+        }
 
         VkPhysicalDeviceFeatures deviceFeatures{};
 
         VkDeviceCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
-        createInfo.pQueueCreateInfos = &queueCreateInfo;
-        createInfo.queueCreateInfoCount = 1;
+        createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+        createInfo.pQueueCreateInfos = queueCreateInfos.data();
 
         createInfo.pEnabledFeatures = &deviceFeatures;
 
@@ -232,6 +254,7 @@ namespace Octo {
         }
 
         vkGetDeviceQueue(m_Device, indices.GraphicsFamily.value(), 0, &m_GraphicsQueue);
+        vkGetDeviceQueue(m_Device, indices.PresentFamily.value(), 0, &m_PresentQueue);
     }
 
     void Device::DestroyDevice() {
