@@ -29,11 +29,13 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 
 namespace Octo {
     Device::Device(std::shared_ptr<Window> pWin)
-        : m_pWin{ pWin }, 
+        : m_pWin{ pWin },
         m_Instance{ VK_NULL_HANDLE },
         m_Surface{ VK_NULL_HANDLE },
         m_PhDevice{ VK_NULL_HANDLE },
-        m_Device{ VK_NULL_HANDLE } {
+        m_Device{ VK_NULL_HANDLE },
+        m_GraphicsQueue{ VK_NULL_HANDLE },
+        m_PresentQueue{ VK_NULL_HANDLE } {
         CreateInstance();
         SetupDebugMessenger();
         CreateSurface();
@@ -78,8 +80,9 @@ namespace Octo {
             createInfo.ppEnabledLayerNames = m_ValidationLayers.data();
 
             PopulateDebugMessengerCreateInfo(debugCreateInfo);
-            createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*) &debugCreateInfo;
-        } else {
+            createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
+        }
+        else {
             createInfo.enabledLayerCount = 0;
             createInfo.pNext = nullptr;
         }
@@ -111,10 +114,10 @@ namespace Octo {
     }
 
     VKAPI_ATTR VkBool32 VKAPI_CALL Device::DebugCallback(
-            VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-            VkDebugUtilsMessageTypeFlagsEXT messageType,
-            const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
-            void *pUserData
+        VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+        VkDebugUtilsMessageTypeFlagsEXT messageType,
+        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+        void* pUserData
     ) {
 
         std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
@@ -133,7 +136,7 @@ namespace Octo {
         }
     }
 
-    void Device::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo) {
+    void Device::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
         createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
         createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
@@ -151,6 +154,10 @@ namespace Octo {
         if (glfwCreateWindowSurface(m_Instance, m_pWin->GetNative(), nullptr, &m_Surface) != VK_SUCCESS) {
             throw std::runtime_error("failed to create window surface!");
         }
+    }
+
+    void Device::DestroySurface() {
+        vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
     }
 
     void Device::PickPhysicalDevie() {
@@ -179,7 +186,25 @@ namespace Octo {
     bool Device::IsDeviceSuitable(VkPhysicalDevice device) {
         QueueFamilyIndices indices = FindQueueFamilies(device);
 
+        bool extensionsSupported = CheckDeviceExtensionSupport(device);
+
         return indices.IsComplete();
+    }
+
+    bool Device::CheckDeviceExtensionSupport(VkPhysicalDevice device) {
+        uint32_t extensionCount;
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+        std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+
+        std::set<std::string> requiredExtensions(m_DeviceExtensions.begin(), m_DeviceExtensions.end());
+
+        for (const auto& extension : availableExtensions) {
+            requiredExtensions.erase(extension.extensionName);
+        }
+
+        return requiredExtensions.empty();
     }
 
     QueueFamilyIndices Device::FindQueueFamilies(VkPhysicalDevice device) {

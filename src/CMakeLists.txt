@@ -1,4 +1,5 @@
 set(SRC_FILES
+    main.cpp
     tools/duration.h
     tools/log.cpp
     tools/log.h
@@ -8,7 +9,7 @@ set(SRC_FILES
     core/device.h
 )
 
-add_library(${PROJECT_NAME} ${SRC_FILES})
+add_executable(${PROJECT_NAME} ${SRC_FILES})
 
 set(INCLUDE_LIBS ../vendor)
 
