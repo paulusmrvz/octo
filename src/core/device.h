@@ -16,6 +16,12 @@ struct QueueFamilyIndices {
 	}
 };
 
+struct SwapChainSupportDetails {
+    VkSurfaceCapabilitiesKHR capabilities;
+    std::vector<VkSurfaceFormatKHR> formats;
+    std::vector<VkPresentModeKHR> presentModes;
+};
+
 namespace Octo {
 	class Device {
 	public:
@@ -46,6 +52,13 @@ namespace Octo {
 	private: // Logical Device
 		void CreateDevice();
 		void DestroyDevice();
+	private: // Swap Chain
+		void CreateSwapChain();
+		VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+		VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+		VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+		SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
+		void DestroySwapChain();
 	private: // Fields
 		std::shared_ptr<Window> m_pWin;
 	private: // Instance
@@ -67,5 +80,10 @@ namespace Octo {
 	private: // Queues
 		VkQueue m_GraphicsQueue;
 		VkQueue m_PresentQueue;
+	private: // Swap Chain
+		VkSwapchainKHR m_SwapChain;
+		std::vector<VkImage> m_SwapChainImages;
+		VkFormat m_SwapChainImageFormat;
+		VkExtent2D m_SwapChainExtent;
 	};
 }
